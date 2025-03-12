@@ -9,11 +9,32 @@ import { NAV_DATA } from "./data";
 import { ArrowLeftIcon, ChevronUp } from "./icons";
 import { MenuItem } from "./menu-item";
 import { useSidebarContext } from "./sidebar-context";
+import { useGeneratePasskeyMutation, useRegisterPasskeyMutation} from "@/redux/apiSlice";
+import { useSelector, shallowEqual, useDispatch} from "react-redux";
+import { RootState } from "@/redux/store";
+import {registerPasskey} from "@/redux/authSlice";
+import { encode } from "base64-arraybuffer";
+import {
+  startRegistration,
+} from "@simplewebauthn/browser";
+import base64url from "base64url";
+
+
+interface RegisterPasskeyPayload {
+  registrationResponse: PublicKeyCredential; // Ensure it's PublicKeyCredential, not Credential | null
+  userId: string; // Ensure userId is a string, not string | null
+}
 
 export function Sidebar() {
+  const [userId, setUserId] = useState<string | null>(null);
   const pathname = usePathname();
   const { setIsOpen, isOpen, isMobile, toggleSidebar } = useSidebarContext();
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
+  const [generatePasskey, { data: passkey, isLoading, error }] = useGeneratePasskeyMutation();
+  const [registerPasskeyMutation] = useRegisterPasskeyMutation();
+  const dispatch = useDispatch();
+
+  const authState = useSelector((state: RootState) => state.auth, shallowEqual);
 
   const toggleExpanded = (title: string) => {
     setExpandedItems((prev) => (prev.includes(title) ? [] : [title]));
@@ -24,6 +45,39 @@ export function Sidebar() {
     // );
   };
 
+  const handleRegisterPasskey = async () => {
+    try {
+      const { data, error } = await generatePasskey(userId);
+      if (error) {
+        console.error("Error generating passkey options:", error);
+        return;
+      }
+    
+      if (!userId) {
+        console.error("User ID is required");
+        return;
+      }
+  
+      console.log("Registration options received:", data.options);
+  
+      const attestationResponse = await startRegistration({...data.options, useAutoRegister: true});
+    
+      const result = await registerPasskeyMutation({
+        registrationResponse: attestationResponse,
+        userId,
+      }).unwrap();
+  
+      dispatch(registerPasskey({ 
+        registrationResponse: attestationResponse,
+        userId
+      }));
+    
+      console.log("Passkey registration successful:", result);
+    } catch (error) {
+      console.error("Error during passkey registration:", error);
+    }
+  };
+  
   useEffect(() => {
     // Keep collapsible open, when it's subpage is active
     NAV_DATA.some((section) => {
@@ -41,6 +95,23 @@ export function Sidebar() {
       });
     });
   }, [pathname]);
+
+  useEffect(() => {
+    const storedUserId = localStorage.getItem("userId");
+    if (storedUserId) {
+      setUserId(storedUserId);
+    }
+    if (userId) {
+      handleRegisterPasskey()
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    if (authState.userId) {
+      localStorage.setItem("userId", authState.userId);
+      setUserId(authState.userId);
+    }
+  }, [authState.userId]);
 
   return (
     <>
@@ -148,6 +219,7 @@ export function Sidebar() {
                                 ? item.url + ""
                                 : "/" +
                                   item.title.toLowerCase().split(" ").join("-");
+                                  
 
                             return (
                               <MenuItem

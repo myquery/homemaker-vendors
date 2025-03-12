@@ -11,14 +11,22 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { LogOutIcon, SettingsIcon, UserIcon } from "./icons";
+import { useLogoutUserMutation } from "@/redux/apiSlice";
+import { useRouter } from "next/navigation";
 
 export function UserInfo() {
   const [isOpen, setIsOpen] = useState(false);
+  const [logoutUser] = useLogoutUserMutation();
+  const router = useRouter(); 
 
   const USER = {
     name: "John Smith",
     email: "johnson@nextadmin.com",
     img: "/images/user/user-03.png",
+  };
+  const handleLogout = async () => {
+    await logoutUser();
+    router.push("/login"); // Redirect to login page
   };
 
   return (
@@ -106,7 +114,8 @@ export function UserInfo() {
         <div className="p-2 text-base text-[#4B5563] dark:text-dark-6">
           <button
             className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-[9px] hover:bg-gray-2 hover:text-dark dark:hover:bg-dark-3 dark:hover:text-white"
-            onClick={() => setIsOpen(false)}
+            // onClick={() => setIsOpen(false)}
+            onClick={handleLogout}
           >
             <LogOutIcon />
 

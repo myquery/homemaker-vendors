@@ -22,7 +22,7 @@ interface SigninWithPasswordProps {
 }
 export default function SigninWithPassword({showOTP, setShowOTP}: SigninWithPasswordProps) {
   const [data, setData] = useState<LoginData>({ email: "", password: "", remember: false });
-  //const [showOTP, setShowOTP] = useState(false);
+
   const [otp, setOtp] = useState("");/*  */
   const [loginUser, { isLoading, error }] = useLoginUserMutation();
   const [verifyOTP] = useVerifyOTPMutation();
@@ -45,7 +45,9 @@ export default function SigninWithPassword({showOTP, setShowOTP}: SigninWithPass
       const response = await loginUser({ email: data.email, password: data.password }).unwrap();
       
       if (response?.data.userId) {
-        dispatch(setUserId(response.data.userId)); // ✅ Store userId in Redux
+        dispatch(setUserId({ userId: response?.data.userId, token: response?.data.token }));
+        localStorage.setItem("authToken", response?.data.token);
+
       }
 
       setShowOTP(true);
@@ -58,8 +60,8 @@ export default function SigninWithPassword({showOTP, setShowOTP}: SigninWithPass
     try {
       const response = await verifyOTP({ otp, userId }).unwrap(); // ✅ Fetch userId from Redux
 
-      if (response.success && response.token) {
-        localStorage.setItem("authToken", response.token);
+      if ( response?.data.token) {
+        localStorage.setItem("authToken", response?.data.token);
         window.dispatchEvent(new Event("storage"));
         router.push("/dashboard"); 
       }
@@ -133,7 +135,7 @@ export default function SigninWithPassword({showOTP, setShowOTP}: SigninWithPass
           </div>
         </form>
       ) : (
-        <OTPVerification onVerify={handleVerifyOTP} /> // ✅ Pass function instead of manually handling userId
+        <OTPVerification onVerify={handleVerifyOTP} userId={userId}/> // ✅ Pass function instead of manually handling userId
       )}
     </div>
   );

@@ -4,10 +4,11 @@ import { useRouter } from "next/navigation";
 import InputGroup from "../FormElements/InputGroup";
 
 interface OTPProps {
-  onVerify: (otp: string) => Promise<void>;
+  onVerify: (otp: string, userId: string) => Promise<void>;
+  userId: any;
 }
 
-export default function OTPVerification({ onVerify }: OTPProps) {
+export default function OTPVerification({ onVerify, userId }: OTPProps) {
   const [otp, setOtp] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -19,7 +20,7 @@ export default function OTPVerification({ onVerify }: OTPProps) {
     setLoading(true);
 
     try {
-      await onVerify(otp); // ✅ Just call the function, no need pass userId
+      await onVerify(otp, userId); // ✅ Just call the function, no need pass userId
     } catch (err) {
       setError("Invalid OTP. Please try again.");
     } finally {
